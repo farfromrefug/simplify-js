@@ -1,6 +1,6 @@
 interface Point {
-	x: number;
-	y: number;
+	latitude: number;
+	longitude: number;
 }
 
 declare function simplify (points: Point[], tolerance?: number, highQuality?: boolean): Point[];
