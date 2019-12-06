@@ -1,9 +1,17 @@
 interface Point {
-	latitude: number;
-	longitude: number;
+  latitude: number;
+  longitude: number;
 }
 
-declare function simplify (points: Point[], tolerance?: number, highQuality?: boolean): Point[];
+declare function simplify(
+  points: Point[],
+  options: {
+    tolerance?: number;
+    highQuality?: boolean;
+    latitudeKey: string | number;
+    longitudeKey: string | number;
+  }
+): Point[];
 declare namespace simplify {}
 
 export = simplify;

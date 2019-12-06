@@ -4,120 +4,136 @@
  mourner.github.io/simplify-js
 */
 
-(function () { 'use strict';
+(function() {
+  "use strict";
 
-// to suit your point format, run search/replace for '.latitude' and '.longitude';
-// for 3D version, see 3d branch (configurability would draw significant performance overhead)
+  // to suit your point format, run search/replace for '.latitude' and '[longitudeKey]';
+  // for 3D version, see 3d branch (configurability would draw significant performance overhead)
 
-// square distance between 2 points
-function getSqDist(p1, p2) {
-
-    var dx = p1.latitude - p2.latitude,
-        dy = p1.longitude - p2.longitude;
+  // square distance between 2 points
+  function getSqDist(p1, p2, latitudeKey, longitudeKey) {
+    var dx = p1[latitudeKey] - p2[latitudeKey],
+      dy = p1[longitudeKey] - p2[longitudeKey];
 
     return dx * dx + dy * dy;
-}
+  }
 
-// square distance from a point to a segment
-function getSqSegDist(p, p1, p2) {
-
-    var x = p1.latitude,
-        y = p1.longitude,
-        dx = p2.latitude - x,
-        dy = p2.longitude - y;
+  // square distance from a point to a segment
+  function getSqSegDist(p, p1, p2) {
+    var x = p1[latitudeKey],
+      y = p1[longitudeKey],
+      dx = p2[latitudeKey] - x,
+      dy = p2[longitudeKey] - y;
 
     if (dx !== 0 || dy !== 0) {
+      var t =
+        ((p[latitudeKey] - x) * dx + (p[longitudeKey] - y) * dy) / (dx * dx + dy * dy);
 
-        var t = ((p.latitude - x) * dx + (p.longitude - y) * dy) / (dx * dx + dy * dy);
-
-        if (t > 1) {
-            x = p2.latitude;
-            y = p2.longitude;
-
-        } else if (t > 0) {
-            x += dx * t;
-            y += dy * t;
-        }
+      if (t > 1) {
+        x = p2[latitudeKey];
+        y = p2[longitudeKey];
+      } else if (t > 0) {
+        x += dx * t;
+        y += dy * t;
+      }
     }
 
-    dx = p.latitude - x;
-    dy = p.longitude - y;
+    dx = p[latitudeKey] - x;
+    dy = p[longitudeKey] - y;
 
     return dx * dx + dy * dy;
-}
-// rest of the code doesn't care about point format
+  }
+  // rest of the code doesn't care about point format
 
-// basic distance-based simplification
-function simplifyRadialDist(points, sqTolerance) {
-
+  // basic distance-based simplification
+  function simplifyRadialDist(points, options) {
     var prevPoint = points[0],
-        newPoints = [prevPoint],
-        point;
-
+      newPoints = [prevPoint],
+      point;
+    var tolerance = options.tolerance;
+    var latitudeKey = options.latitudeKey;
+    var longitudeKey = options.longitudeKey;
     for (var i = 1, len = points.length; i < len; i++) {
-        point = points[i];
+      point = points[i];
 
-        if (getSqDist(point, prevPoint) > sqTolerance) {
-            newPoints.push(point);
-            prevPoint = point;
-        }
+      if (getSqDist(point, prevPoint, latitudeKey, longitudeKey) > tolerance) {
+        newPoints.push(point);
+        prevPoint = point;
+      }
     }
 
     if (prevPoint !== point) newPoints.push(point);
 
     return newPoints;
-}
+  }
 
-function simplifyDPStep(points, first, last, sqTolerance, simplified) {
+  function simplifyDPStep(points, first, last, options, simplified) {
+    var tolerance = options.tolerance;
     var maxSqDist = sqTolerance,
-        index;
+      index;
 
+    var latitudeKey = options.latitudeKey;
+    var longitudeKey = options.longitudeKey;
     for (var i = first + 1; i < last; i++) {
-        var sqDist = getSqSegDist(points[i], points[first], points[last]);
+      var sqDist = getSqSegDist(
+        points[i],
+        points[first],
+        points[last],
+        latitudeKey,
+        longitudeKey
+      );
 
-        if (sqDist > maxSqDist) {
-            index = i;
-            maxSqDist = sqDist;
-        }
+      if (sqDist > maxSqDist) {
+        index = i;
+        maxSqDist = sqDist;
+      }
     }
 
-    if (maxSqDist > sqTolerance) {
-        if (index - first > 1) simplifyDPStep(points, first, index, sqTolerance, simplified);
-        simplified.push(points[index]);
-        if (last - index > 1) simplifyDPStep(points, index, last, sqTolerance, simplified);
+    if (maxSqDist > tolerance) {
+      if (index - first > 1)
+        simplifyDPStep(points, first, index, options, simplified);
+      simplified.push(points[index]);
+      if (last - index > 1)
+        simplifyDPStep(points, index, last, options, simplified);
     }
-}
+  }
 
-// simplification using Ramer-Douglas-Peucker algorithm
-function simplifyDouglasPeucker(points, sqTolerance) {
+  // simplification using Ramer-Douglas-Peucker algorithm
+  function simplifyDouglasPeucker(points, options) {
     var last = points.length - 1;
 
     var simplified = [points[0]];
-    simplifyDPStep(points, 0, last, sqTolerance, simplified);
+    simplifyDPStep(points, 0, last, options, simplified);
     simplified.push(points[last]);
 
     return simplified;
-}
+  }
 
-// both algorithms combined for awesome performance
-function simplify(points, tolerance, highestQuality) {
-
+  // both algorithms combined for awesome performance
+  function simplify(points, options) {
     if (points.length <= 2) return points;
+    options = options || {};
+    const sqTolerance =
+      options.tolerance !== undefined
+        ? options.tolerance * options.tolerance
+        : 1;
 
-    var sqTolerance = tolerance !== undefined ? tolerance * tolerance : 1;
-
-    points = highestQuality ? points : simplifyRadialDist(points, sqTolerance);
-    points = simplifyDouglasPeucker(points, sqTolerance);
+    points = !!options.highestQuality
+      ? points
+      : simplifyRadialDist(points, { tolerance: sqTolerance });
+    points = simplifyDouglasPeucker(points, { tolerance: sqTolerance });
 
     return points;
-}
+  }
 
-// export as AMD module / Node module / browser or worker variable
-if (typeof define === 'function' && define.amd) define(function() { return simplify; });
-else if (typeof module !== 'undefined') {
+  // export as AMD module / Node module / browser or worker variable
+  if (typeof define === "function" && define.amd)
+    define(function() {
+      return simplify;
+    });
+  else if (typeof module !== "undefined") {
     module.exports = simplify;
     module.exports.default = simplify;
-} else if (typeof self !== 'undefined') self.simplify = simplify;
-else window.simplify = simplify;
-
+  } else if (typeof self !== "undefined") self.simplify = simplify;
+  else window.simplify = simplify;
 })();
