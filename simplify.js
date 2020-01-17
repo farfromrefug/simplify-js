@@ -72,7 +72,6 @@
             index;
         var latitudeKey = options.latitudeKey;
         var longitudeKey = options.longitudeKey;
-        console.log('simplifyDPStep', options, latitudeKey, longitudeKey);
         for (var i = first + 1; i < last; i++) {
             var sqDist = getSqSegDist(points[i], points[first], points[last], latitudeKey, longitudeKey);
 
@@ -106,7 +105,6 @@
         options = options || {};
         const tolerance = options.tolerance !== undefined ? options.tolerance * options.tolerance : 1;
         const actualOptions = { tolerance: tolerance, latitudeKey: options.latitudeKey, longitudeKey: options.longitudeKey };
-        console.log('simplify', options, points);
         points = !!options.highestQuality ? points : simplifyRadialDist(points, actualOptions);
         points = simplifyDouglasPeucker(points, actualOptions);
 
