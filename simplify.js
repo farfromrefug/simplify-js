@@ -19,7 +19,7 @@
   }
 
   // square distance from a point to a segment
-  function getSqSegDist(p, p1, p2) {
+  function getSqSegDist(p, p1, p2, latitudeKey, longitudeKey) {
     var x = p1[latitudeKey],
       y = p1[longitudeKey],
       dx = p2[latitudeKey] - x,
