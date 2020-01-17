@@ -69,7 +69,7 @@
 
   function simplifyDPStep(points, first, last, options, simplified) {
     var tolerance = options.tolerance;
-    var maxSqDist = sqTolerance,
+    var maxSqDist = tolerance,
       index;
 
     var latitudeKey = options.latitudeKey;
